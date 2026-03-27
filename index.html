@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Priority–Consensus Matrix — Language Experts (n=4)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Times New Roman", serif; background: #fff; color: #222; padding: 24px; }
+  h2 { font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 4px; }
+  p.sub { font-size: 12px; text-align: center; color: #555; margin-bottom: 16px; }
+  #legend { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-bottom: 14px; font-size: 12px; }
+  .leg { display: flex; align-items: center; gap: 6px; }
+  .leg-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  #wrap { position: relative; max-width: 860px; margin: 0 auto; }
+  canvas { display: block; width: 100%; }
+  #tooltip {
+    position: absolute; background: #fff; border: 1px solid #ddd;
+    border-radius: 8px; padding: 10px 14px; font-size: 12px;
+    pointer-events: none; display: none; max-width: 210px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12); z-index: 10;
+    font-family: Arial, sans-serif;
+  }
+  #tooltip table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  #tooltip td { padding: 2px 5px; font-size: 11px; }
+  #tooltip td:last-child { text-align: right; font-weight: 600; }
+  #tooltip tr:nth-child(even) td { background: #f7f7f7; }
+</style>
+</head>
+<body>
+
+<h2>Priority–Consensus Matrix — Language Educators (n=4)</h2>
+
+<div id="legend">
+  <div class="leg"><div class="leg-dot" style="background:#7F77DD"></div>Personalisation</div>
+  <div class="leg"><div class="leg-dot" style="background:#1D9E75"></div>Communication</div>
+  <div class="leg"><div class="leg-dot" style="background:#D85A30"></div>Affect</div>
+  <div class="leg"><div class="leg-dot" style="background:#378ADD"></div>Ethics</div>
+  <div class="leg"><div class="leg-dot" style="background:#BA7517"></div>Functionality</div>
+</div>
+
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="tooltip"></div>
+</div>
+
+<script>
+const COLORS = {
+  Personalisation: "#7F77DD",
+  Communication:   "#1D9E75",
+  Affect:          "#D85A30",
+  Ethics:          "#378ADD",
+  Functionality:   "#BA7517",
+};
+
+const CW = {
+  Personalisation:        [0.07, 0.13, 0.12, 0.20],
+  Communication:          [0.13, 0.15, 0.29, 0.07],
+  Affect:                 [0.05, 0.03, 0.08, 0.11],
+  Ethics:                 [0.50, 0.18, 0.14, 0.49],
+  Functionality:          [0.03, 0.04, 0.07, 0.07],
+  "Language Proficiency": [0.22, 0.47, 0.30, 0.06],
+};
+
+const LW = {
+  Personalisation: {
+    "Personalised Learning Content":  [0.33, 0.12, 0.61, 0.29],
+    "Personalised Tutoring Service":  [0.33, 0.27, 0.27, 0.63],
+    "Personalised Language Practice": [0.33, 0.61, 0.12, 0.08],
+  },
+  Communication: {
+    "Interpersonal Communication": [0.15, 0.40, 0.12, 0.29],
+    "Open Communication":          [0.73, 0.50, 0.27, 0.63],
+    "Cohesive Communication":      [0.12, 0.10, 0.61, 0.08],
+  },
+  Affect: {
+    "Manner":                [0.71, 0.70, 0.10, 0.11],
+    "Emotional Information": [0.06, 0.06, 0.65, 0.71],
+    "Engagement":            [0.23, 0.24, 0.25, 0.18],
+  },
+  Ethics: {
+    "Beneficence":        [0.03, 0.08, 0.04, 0.02],
+    "Nonmaleficence":     [0.32, 0.03, 0.10, 0.08],
+    "Autonomy":           [0.40, 0.05, 0.25, 0.05],
+    "Justice":            [0.02, 0.29, 0.13, 0.44],
+    "Explicability":      [0.10, 0.08, 0.14, 0.27],
+    "Academic Integrity": [0.13, 0.47, 0.34, 0.14],
+  },
+  Functionality: {
+    "Timeliness":    [0.33, 0.09, 0.15, 0.73],
+    "Ease of Use":   [0.33, 0.19, 0.38, 0.07],
+    "Accessibility": [0.33, 0.72, 0.47, 0.20],
+  },
+};
+
+const experts = ["Expert 1","Expert 2","Expert 3","Expert 4"];
+const points = [];
+for (const [crit, subs] of Object.entries(LW)) {
+  const cw = CW[crit];
+  for (const [sub, lw] of Object.entries(subs)) {
+    const gws  = lw.map((v,i) => v * cw[i]);
+    const mean = gws.reduce((a,b)=>a+b,0)/4;
+    const std  = Math.sqrt(gws.reduce((a,b)=>a+(b-mean)**2,0)/4);
+    const cv   = mean > 0 ? std/mean : 0;
+    points.push({ label: sub, criteria: crit, color: COLORS[crit], x: mean, y: 1-cv, gws });
+  }
+}
+
+const xs = points.map(p=>p.x), ys = points.map(p=>p.y);
+const xMid = xs.reduce((a,b)=>a+b,0)/xs.length;
+const yMid = ys.reduce((a,b)=>a+b,0)/ys.length;
+
+const canvas = document.getElementById("c");
+const tip    = document.getElementById("tooltip");
+let W, H, pad;
+
+function setup() {
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.offsetWidth;
+  H = Math.round(W * 0.82);
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.height = H + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  pad = { t: 30, r: 30, b: 48, l: 52 };
+  draw(ctx);
+}
+
+function toCanvas(x, y, xMin, xMax, yMin, yMax) {
+  return [
+    pad.l + (x - xMin) / (xMax - xMin) * (W - pad.l - pad.r),
+    pad.t + (1 - (y - yMin) / (yMax - yMin)) * (H - pad.t - pad.b)
+  ];
+}
+
+function draw(ctx) {
+  ctx.clearRect(0, 0, W, H);
+  const xMin = Math.min(...xs) - (Math.max(...xs)-Math.min(...xs))*0.25;
+  const xMax = Math.max(...xs) + (Math.max(...xs)-Math.min(...xs))*0.25;
+  const yMin = Math.min(...ys) - (Math.max(...ys)-Math.min(...ys))*0.25;
+  const yMax = Math.max(...ys) + (Math.max(...ys)-Math.min(...ys))*0.25;
+  canvas._map = { xMin, xMax, yMin, yMax };
+
+  const [mx, my] = toCanvas(xMid, yMid, xMin, xMax, yMin, yMax);
+
+  ctx.fillStyle = "rgba(55,138,221,0.05)";
+  ctx.fillRect(mx, pad.t, W-pad.r-mx, my-pad.t);
+  ctx.fillStyle = "rgba(216,90,48,0.04)";
+  ctx.fillRect(mx, my, W-pad.r-mx, H-pad.b-my);
+  ctx.fillStyle = "rgba(136,136,136,0.04)";
+  ctx.fillRect(pad.l, pad.t, mx-pad.l, H-pad.t-pad.b);
+
+  ctx.strokeStyle = "#ccc"; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, H-pad.b); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad.l, H-pad.b); ctx.lineTo(W-pad.r, H-pad.b); ctx.stroke();
+
+  ctx.setLineDash([5,4]); ctx.strokeStyle = "#bbb"; ctx.lineWidth = 0.7;
+  ctx.beginPath(); ctx.moveTo(mx, pad.t); ctx.lineTo(mx, H-pad.b); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad.l, my); ctx.lineTo(W-pad.r, my); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = "#999"; ctx.font = "11px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("0.041", mx, H-pad.b+26);
+  ctx.textAlign = "right";
+  ctx.fillText("0.273", pad.l-6, my+4);
+
+  ctx.fillStyle = "#aaa"; ctx.font = "11px Arial"; ctx.textAlign = "center";
+  for (let i=0; i<=5; i++) {
+    const v = xMin + (xMax-xMin)*i/5;
+    const [px] = toCanvas(v, 0, xMin, xMax, yMin, yMax);
+    ctx.fillText(v.toFixed(2), px, H-pad.b+14);
+  }
+  ctx.textAlign = "right";
+  for (let i=0; i<=5; i++) {
+    const v = yMin + (yMax-yMin)*i/5;
+    const [,py] = toCanvas(0, v, xMin, xMax, yMin, yMax);
+    ctx.fillText(v.toFixed(2), pad.l-6, py+4);
+  }
+
+  ctx.fillStyle = "#333"; ctx.font = "13px Arial"; ctx.textAlign = "center";
+  ctx.fillText("Mean Global Weight", pad.l+(W-pad.l-pad.r)/2, H-6);
+  ctx.save(); ctx.translate(14, pad.t+(H-pad.t-pad.b)/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText("Consensus Score (1 − CV)", 0, 0); ctx.restore();
+
+  ctx.font = "italic 11px Arial";
+  ctx.fillStyle = "rgba(43,108,163,0.65)"; ctx.textAlign = "right";
+  ctx.fillText("High Priority / High Consensus", W-pad.r-4, pad.t+14);
+  ctx.fillStyle = "rgba(184,74,42,0.65)";
+  ctx.fillText("High Priority / Low Consensus", W-pad.r-4, H-pad.b-8);
+  ctx.fillStyle = "rgba(74,74,74,0.6)"; ctx.textAlign = "left";
+  ctx.fillText("Low Priority / High Consensus", pad.l+4, pad.t+14);
+  ctx.fillText("Low Priority / Low Consensus", pad.l+4, H-pad.b-8);
+
+  for (const p of points) {
+    const [px, py] = toCanvas(p.x, p.y, xMin, xMax, yMin, yMax);
+    p._px = px; p._py = py;
+    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2);
+    ctx.fillStyle = p.color; ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+}
+
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let hit = null;
+  for (const p of points) {
+    const dx = p._px-mx, dy = p._py-my;
+    if (Math.sqrt(dx*dx+dy*dy) < 10) { hit = p; break; }
+  }
+  if (hit) {
+    canvas.style.cursor = "pointer";
+    let html = `<div style="font-weight:600;font-size:13px;color:${hit.color};margin-bottom:3px;">${hit.label}</div>`;
+    html += `<div style="font-size:11px;color:#888;margin-bottom:7px;">${hit.criteria}</div>`;
+    html += `<table>
+      <tr><td style="color:#888;">Mean GW</td><td>${hit.x.toFixed(4)}</td></tr>
+      <tr><td style="color:#888;">Consensus</td><td>${hit.y.toFixed(4)}</td></tr>
+      <tr><td colspan="2" style="padding-top:7px;font-weight:600;color:#888;font-size:10px;">Global weight per expert</td></tr>`;
+    experts.forEach((ex,i) => {
+      html += `<tr><td style="color:#888;">${ex}</td><td>${hit.gws[i].toFixed(4)}</td></tr>`;
+    });
+    html += "</table>";
+    tip.innerHTML = html;
+    tip.style.display = "block";
+    let tx = e.clientX - rect.left + 14;
+    let ty = e.clientY - rect.top - 10;
+    if (tx + 220 > W) tx = e.clientX - rect.left - 224;
+    tip.style.left = tx + "px";
+    tip.style.top  = ty + "px";
+  } else {
+    canvas.style.cursor = "default";
+    tip.style.display = "none";
+  }
+});
+
+canvas.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+window.addEventListener("resize", setup);
+setup();
+</script>
+</body>
+</html>
