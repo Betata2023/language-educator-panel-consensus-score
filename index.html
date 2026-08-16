@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Priority–Consensus Matrix — Language Experts (n=4)</title>
+<title>Priority–Consensus Matrix — Language Educators Panel (n=4)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Times New Roman", serif; background: #fff; color: #222; padding: 24px; }
@@ -29,7 +29,7 @@
 </head>
 <body>
 
-<h2>Priority–Consensus Matrix — Language Educators (n=4)</h2>
+<h2>Priority–Consensus Matrix — Language Educators Panel (n=4)</h2>
 
 <div id="legend">
   <div class="leg"><div class="leg-dot" style="background:#7F77DD"></div>Personalisation</div>
@@ -93,7 +93,7 @@ const LW = {
   },
 };
 
-const experts = ["Expert 1","Expert 2","Expert 3","Expert 4"];
+const experts = ["LE 1","LE 2","LE 3","LE 4"];
 const points = [];
 for (const [crit, subs] of Object.entries(LW)) {
   const cw = CW[crit];
@@ -162,9 +162,9 @@ function draw(ctx) {
 
   ctx.fillStyle = "#999"; ctx.font = "11px Arial";
   ctx.textAlign = "center";
-  ctx.fillText("0.041", mx, H-pad.b+26);
+  ctx.fillText(xMid.toFixed(3), mx, H-pad.b+26);
   ctx.textAlign = "right";
-  ctx.fillText("0.273", pad.l-6, my+4);
+  ctx.fillText(yMid.toFixed(3), pad.l-6, my+4);
 
   ctx.fillStyle = "#aaa"; ctx.font = "11px Arial"; ctx.textAlign = "center";
   for (let i=0; i<=5; i++) {
